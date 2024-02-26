@@ -2,6 +2,48 @@ local config = require("definition-or-references.config")
 
 local M = {}
 
+function M.parse_result(v)
+  if not v then
+    return {}
+  end
+
+  local parsed = {}
+  -- if has `range` than result is a single value
+  if v.range then
+    table.insert(parsed, v)
+  else -- otherwise it is a table of results
+    for _, vv in ipairs(v) do
+      table.insert(parsed, vv)
+    end
+  end
+
+  return parsed
+end
+
+function M.dedup_results(result)
+  if #result <= 1 then
+    return result
+  end
+
+  local seen = {}
+  local filtered_result = {}
+  for _, r in pairs(result) do
+    local uri = r.uri or r.targetUri
+    if not seen[uri] then
+      seen[uri] = {}
+    end
+
+    local range = r.range or r.targetRange
+    local start_line = range.start.line
+    if not seen[uri][start_line] then
+      seen[uri][start_line] = true
+      filtered_result[#filtered_result + 1] = r
+    end
+  end
+
+  return filtered_result
+end
+
 function M.cursor_not_on_result(bufnr, cursor, result)
   local target_uri = result.targetUri or result.uri
   local target_range = result.targetRange or result.range

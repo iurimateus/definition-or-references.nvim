@@ -9,21 +9,31 @@ local function definitions()
   local current_bufnr = vim.fn.bufnr("%")
 
   log.trace("definitions", "Starting definitions request")
-  _, methods.definitions.cancel_function = vim.lsp.buf_request(
+  methods.definitions.cancel_function = vim.lsp.buf_request_all(
     0,
     methods.definitions.name,
     util.make_params(),
-    function(err, result, context, _)
+    function(results)
       log.trace("definitions", "Starting definitions request handling")
       methods.definitions.is_pending = false
 
-      if err then
-        if config.get_notify_option("errors") then
-          vim.notify(err.message, vim.log.levels.ERROR)
+      local flat_results = {}
+      for client_id, r in pairs(results) do
+        local err = r.error
+        local result = r.result
+        if err then
+          if config.get_notify_option("errors") then
+            vim.notify(
+              string.format("client_id: %s; %s", client_id, err.message),
+              vim.log.levels.ERROR
+            )
+          end
+        else
+          vim.list_extend(flat_results, util.parse_result(result))
         end
-        return
       end
 
+      local result = util.dedup_results(flat_results)
       methods.definitions.result = result
 
       -- I assume that the we care about only one (first) definition
@@ -31,11 +41,14 @@ local function definitions()
         local first_definition = result[1]
 
         if util.cursor_not_on_result(current_bufnr, current_cursor, first_definition) then
+          -- hack
+          local client_id = vim.tbl_keys(results)[1]
+
           methods.clear_references()
           log.trace("definitions", "Current cursor not on result")
           vim.lsp.util.jump_to_location(
             first_definition,
-            vim.lsp.get_client_by_id(context.client_id).offset_encoding
+            vim.lsp.get_client_by_id(client_id).offset_encoding
           )
           return
         end
@@ -47,7 +60,7 @@ local function definitions()
 
       if not methods.references.is_pending then
         log.trace("definitions", "handle_references_response")
-        references.handle_references_response(context)
+        references.handle_references_response()
       end
     end
   )

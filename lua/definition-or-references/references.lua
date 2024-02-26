@@ -3,7 +3,7 @@ local utils = require("definition-or-references.utils")
 local log = require("definition-or-references.util.debug")
 local config = require("definition-or-references.config")
 
-local function handle_references_response(context)
+local function handle_references_response()
   log.trace("handle_references_response", "handle_references_response")
   local result_entries = methods.references.result
 
@@ -35,11 +35,7 @@ local function handle_references_response(context)
     then
       vim.notify("No definition but single reference found")
     end
-    vim.lsp.util.jump_to_location(
-      result_entries[1],
-      vim.lsp.get_client_by_id(context.client_id).offset_encoding,
-      true
-    )
+    vim.lsp.util.jump_to_location(result_entries[1], nil, true)
 
     return
   end
@@ -49,17 +45,15 @@ local function handle_references_response(context)
   if on_references_result then
     return on_references_result(result_entries)
   end
-
-  vim.lsp.handlers[methods.references.name](nil, result_entries, context)
 end
 
 local function send_references_request()
   log.trace("send_references_request", "Starting references request")
-  _, methods.references.cancel_function = vim.lsp.buf_request(
+  methods.references.cancel_function = vim.lsp.buf_request_all(
     0,
     methods.references.name,
     utils.make_params(),
-    function(err, result, context, _)
+    function(results)
       log.trace("send_references_request", "Starting references request handling")
       -- sometimes when cancel function was called after request has been fulfilled this would be called
       -- if cancel_function is nil that means that references was cancelled
@@ -69,18 +63,26 @@ local function send_references_request()
 
       methods.references.is_pending = false
 
-      if err then
-        if config.get_notify_option("errors") then
-          vim.notify(err.message, vim.log.levels.ERROR)
+      local flat_results = {}
+      for client_id, res in pairs(results) do
+        local err = res.error
+        if err then
+          if config.get_notify_option("errors") then
+            vim.notify(
+              string.format("client_id: %s; %s", client_id, err.message),
+              vim.log.levels.ERROR
+            )
+          end
+        else
+          vim.list_extend(flat_results, utils.parse_result(res.result))
         end
-        return
       end
 
-      methods.references.result = result
+      methods.references.result = utils.dedup_results(flat_results)
 
       if not methods.definitions.is_pending then
         log.trace("send_references_request", "handle_references_response")
-        handle_references_response(context)
+        handle_references_response()
       end
     end
   )
