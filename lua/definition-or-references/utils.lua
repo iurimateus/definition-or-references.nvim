@@ -11,9 +11,10 @@ function M.parse_result(v)
   -- if has `range` than result is a single value
   if v.range then
     table.insert(parsed, v)
-  else -- otherwise it is a table of results
+  elseif type(v) == "table" then
+    -- otherwise it is a table of results
     for _, vv in ipairs(v) do
-      table.insert(parsed, vv)
+      parsed[#parsed + 1] = vv
     end
   end
 
@@ -59,11 +60,22 @@ function M.cursor_not_on_result(bufnr, cursor, result)
   local current_row = current_range[1]
   local current_col = current_range[2] + 1 -- +1 because if cursor highlights first character its a column behind
 
-  return target_bufnr ~= current_bufnr
+  if
+    target_bufnr ~= current_bufnr
     or current_row < target_row_start
     or current_row > target_row_end
-    or (current_row == target_row_start and current_col < target_col_start)
+  then
+    return true
+  end
+
+  if current_row == target_row_start and target_row_start == target_row_end then
+    return false
+  elseif
+    (current_row == target_row_start and current_col < target_col_start)
     or (current_row == target_row_end and current_col > target_col_end)
+  then
+    return true
+  end
 end
 
 function M.get_filename_fn()
@@ -81,10 +93,10 @@ function M.get_filename_fn()
   end
 end
 
-function M.make_params()
+function M.make_params(includeDeclaration)
   local params = vim.lsp.util.make_position_params(0)
-
-  params.context = { includeDeclaration = false }
+  includeDeclaration = vim.F.if_nil(includeDeclaration, false)
+  params.context = { includeDeclaration = includeDeclaration }
 
   return params
 end

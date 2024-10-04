@@ -35,8 +35,9 @@ local function handle_references_response()
     then
       vim.notify("No definition but single reference found")
     end
-    vim.lsp.util.jump_to_location(result_entries[1], nil, true)
 
+    -- vim.print(result_entries, result_entries[1])
+    vim.lsp.util.jump_to_location(result_entries[1], "utf-16", true)
     return
   end
 
@@ -47,12 +48,14 @@ local function handle_references_response()
   end
 end
 
-local function send_references_request()
+local function send_references_request(includeDeclaration)
+  includeDeclaration = vim.F.if_nil(includeDeclaration, true)
+
   log.trace("send_references_request", "Starting references request")
   methods.references.cancel_function = vim.lsp.buf_request_all(
     0,
     methods.references.name,
-    utils.make_params(),
+    utils.make_params(includeDeclaration),
     function(results)
       log.trace("send_references_request", "Starting references request handling")
       -- sometimes when cancel function was called after request has been fulfilled this would be called

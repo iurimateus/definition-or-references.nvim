@@ -15,7 +15,7 @@ local state = {
 
 local function clear_references()
   if state.references.is_pending then
-    state.references.cancel_function()
+    pcall(state.references.cancel_function)
   end
   state.references.cancel_function = nil
   state.references.result = nil
@@ -24,7 +24,7 @@ end
 
 local function clear_definitions()
   if state.definitions.is_pending then
-    state.definitions.cancel_function()
+    pcall(state.definitions.cancel_function)
   end
   state.definitions.cancel_function = nil
   state.definitions.is_pending = nil
