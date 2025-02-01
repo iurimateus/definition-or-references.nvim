@@ -21,14 +21,33 @@ function M.parse_result(v)
   return parsed
 end
 
-function M.dedup_results(result)
-  if #result <= 1 then
-    return result
+function M.dedup_results(results)
+  if #results <= 1 then
+    return results
   end
 
   local seen = {}
   local filtered_result = {}
-  for _, r in pairs(result) do
+  if results[1].client_id or results[1].result then
+    for _, t in pairs(results) do
+      local r = t.result
+      local uri = r.uri or r.targetUri
+      if not seen[uri] then
+        seen[uri] = {}
+      end
+
+      local range = r.range or r.targetRange
+      local start_line = range.start.line
+      if not seen[uri][start_line] then
+        seen[uri][start_line] = true
+        filtered_result[#filtered_result + 1] = { client_id = t.client_id, result = r }
+      end
+    end
+
+    return filtered_result
+  end
+
+  for _, r in pairs(results) do
     local uri = r.uri or r.targetUri
     if not seen[uri] then
       seen[uri] = {}
