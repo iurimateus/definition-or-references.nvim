@@ -72,7 +72,10 @@ local function definitions()
 
     if config.get_notify_option("errors") then
       for _, error in pairs(errors) do
-        vim.api.nvim_err_writeln(error.client_id .. " " .. error.err.message)
+        if vim.tbl_get(error, "err", "message") ~= "Request timed out" then
+          local chunk = { vim.inspect(error) }
+          vim.api.nvim_echo({ chunk }, true, { err = true })
+        end
       end
     end
 

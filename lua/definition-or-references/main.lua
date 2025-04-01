@@ -12,7 +12,8 @@ function DefinitionOrReferences.definition_or_references()
   methods.clear_definitions()
   -- sending references request before definitons to parallelize both requests
   definitions()
-  references.send_references_request()
+  -- based-pyright cancels in-flight requests
+  -- references.send_references_request()
 end
 
 return DefinitionOrReferences
