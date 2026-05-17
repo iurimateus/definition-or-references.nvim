@@ -1,4 +1,5 @@
-local config = require("definition-or-references.config")
+-- local config = require("definition-or-references.config")
+local if_nil = vim.nonnil or vim.F.if_nil
 
 local M = {}
 
@@ -100,7 +101,8 @@ end
 function M.get_filename_fn()
   local bufnr_name_cache = {}
   return function(bufnr)
-    bufnr = vim.F.if_nil(bufnr, 0)
+    bufnr = if_nil(bufnr, 0)
+
     local c = bufnr_name_cache[bufnr]
     if c then
       return c
@@ -113,8 +115,21 @@ function M.get_filename_fn()
 end
 
 function M.make_params(includeDeclaration)
-  local params = vim.lsp.util.make_position_params(0)
-  includeDeclaration = vim.F.if_nil(includeDeclaration, false)
+  local ms = vim.lsp.protocol.Methods
+  local client = vim.lsp.get_clients({ method = ms.textDocument_references })[1]
+
+  local position_encoding = client and client.offset_encoding
+    or vim
+      .iter(vim.lsp.get_({
+        method = ms.textDocument_references,
+        -- bufnr = bufnr,
+      }))
+      :find(function(c)
+        return c.name ~= "null-ls"
+      end).offset_encoding
+
+  local params = vim.lsp.util.make_position_params(0, position_encoding or "utf-16")
+  includeDeclaration = if_nil(includeDeclaration, false)
   params.context = { includeDeclaration = includeDeclaration }
 
   return params

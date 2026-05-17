@@ -18,7 +18,7 @@ local function definitions()
       return c.name ~= "null-ls"
     end)
 
-  local position_encoding = c and c.offset_encoding
+  local position_encoding = c and c.offset_encoding or "utf-16"
 
   methods.definitions.is_pending = true
 

@@ -48,6 +48,7 @@ local function handle_references_response()
         :find(function(c)
           return c.name ~= "null-ls"
         end).offset_encoding
+      or "utf-16"
 
     vim.lsp.util.show_document(
       result_entries[1].result,
@@ -69,7 +70,8 @@ local function handle_references_response()
 end
 
 local function send_references_request(includeDeclaration)
-  includeDeclaration = vim.F.if_nil(includeDeclaration, true)
+  local if_nil = vim.nonnil or vim.F.if_nil
+  includeDeclaration = if_nil(includeDeclaration, true)
 
   local bufnr = vim.api.nvim_get_current_buf()
   local cursor = vim.api.nvim_win_get_cursor(0)
